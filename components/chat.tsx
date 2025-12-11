@@ -353,7 +353,7 @@ export function Chat() {
         />
         <div className="min-h-screen bg-grid-pattern">
           {navbar}
-          <div className="flex justify-center items-center flex-col h-[75dvh]">
+          <div className="flex justify-center items-center flex-col h-[85dvh]">
             <div className="flex flex-col justify-center items-center max-w-[800px] w-full font-inter px-4">
               <h1 className="mb-4 text-center text-5xl font-bold text-black tracking-tight">
                 Share your screen with AI
@@ -374,6 +374,21 @@ export function Chat() {
                   showSuggestions
                   onSuggestedActionClicked={trackSuggestedActionClicked}
                 />
+              </div>
+
+              <div className="mt-12 text-center text-sm text-gray-500 max-w-xl">
+                <p>
+                  Your privacy is our priority. Your screen data is not stored
+                  or used for model training.{" "}
+                  <a
+                    href="https://github.com/bullmeza/screen.vision#privacy--security"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-gray-600 transition-colors"
+                  >
+                    Read more
+                  </a>
+                </p>
               </div>
             </div>
           </div>

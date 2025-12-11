@@ -12,6 +12,15 @@ https://github.com/user-attachments/assets/c84fc58d-5dc0-4997-85dd-81dad27f9089
 | **Qwen3-VL 235B** | OpenRouter | Step verification: compares before/after screenshots to confirm action completion      |
 | **Qwen3-VL 30B**  | OpenRouter | Coordinate detection: locates specific UI elements on screen                           |
 
+## Privacy & Security
+
+Privacy is our top priority. Screen Vision is designed to process your data securely without retaining it.
+
+- **Zero Data Retention**: No images or screen recordings are stored on the server. All processing happens in real-time, and data is discarded immediately after analysis.
+- **Secure AI Processing**: Screenshots are sent to trusted LLM providers (OpenAI and Fireworks AI) solely for analysis. These providers adhere to strict data handling policies and do not store or use your data to train their models.
+  - [OpenAI Enterprise Privacy](https://platform.openai.com/docs/guides/your-data)
+  - [Fireworks AI Data Handling Policy](https://docs.fireworks.ai/guides/security_compliance/data_handling)
+
 ## How It Works
 
 The system is straightforward:
@@ -108,11 +117,6 @@ uvicorn api.index:app --host 0.0.0.0 --port 8000
 ```
 
 Or use the included `Procfile` for platforms like Railway or Heroku.
-
-## Privacy Notes
-
-- Screenshots are sent to LLM providers (OpenAI/OpenRouter) for analysis. These providers do not store inputs and responses.
-- No images are stored on our servers. They are processed and discarded.
 
 ## Tech Stack
 
