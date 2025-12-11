@@ -278,9 +278,8 @@ export function Chat() {
         <img src="/logo.png" height={40} width={180} />
       </div>
       <a
-        href="https://github.com"
+        href="https://github.com/bullmeza/screen.vision"
         target="_blank"
-        rel="noopener noreferrer"
         className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
       >
         <Github size={16} />
