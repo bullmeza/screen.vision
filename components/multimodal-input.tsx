@@ -30,7 +30,8 @@ import { cn, getSystemInfo } from "@/lib/utils";
 import { ArrowUpIcon, SparklesIcon } from "./icons";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
-import { Monitor, Command, Box } from "@geist-ui/icons";
+import { Monitor, Command, Box, Cloud, Globe } from "@geist-ui/icons";
+import { generateAction } from "@/lib/ai";
 
 export function MultimodalInput({
   input,
@@ -69,9 +70,16 @@ export function MultimodalInput({
   >([]);
 
   useEffect(() => {
+    const disableRecommendations = localStorage.getItem("recommendations");
+
+    if (disableRecommendations) return;
+
+    const systemInfo = getSystemInfo();
+    const osName = systemInfo.os.osName;
+
     setSuggestedActions([
-      { text: "Help me install Zoom", icon: "monitor" },
-      { text: "Update macOS", icon: "command" },
+      ...(osName ? [{ text: `Update ${osName}`, icon: "command" }] : []),
+      { text: "Change DNS to 1.1.1.1", icon: "globe" },
       { text: "Create S3 bucket on Google Cloud", icon: "box" },
     ]);
   }, []);
@@ -124,6 +132,10 @@ export function MultimodalInput({
         return <Command size={16} />;
       case "box":
         return <Box size={16} />;
+      case "cloud":
+        return <Cloud size={16} />;
+      case "globe":
+        return <Globe size={16} />;
       default:
         return null;
     }
