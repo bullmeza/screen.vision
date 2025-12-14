@@ -91,6 +91,7 @@ export function Chat() {
   const [hasAcceptedModalBefore, setHasAcceptedModalBefore] = useState(false);
   const [browserIsSafari, setBrowserIsSafari] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [githubStars, setGithubStars] = useState(25);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -102,6 +103,13 @@ export function Chat() {
     );
     setBrowserIsSafari(isSafari());
     setIsMobile(isMobileDevice());
+
+    fetch("https://api.github.com/repos/bullmeza/screen.vision")
+      .then((res) => res.json())
+      .then((data) => {
+        setGithubStars(data.stargazers_count ?? 25);
+      })
+      .catch(() => setGithubStars(25));
   }, []);
 
   // Handler to complete Safari settings and persist to localStorage
@@ -289,6 +297,11 @@ export function Chat() {
         >
           <Github size={16} />
           <span className="text-sm">Star on GitHub</span>
+          <span className="text-xs font-medium bg-gray-100 px-1.5 py-0.5 rounded-md">
+            {githubStars >= 1000
+              ? `${(githubStars / 1000).toFixed(1)}k`
+              : githubStars}
+          </span>
         </a>
 
         {!isMobile && (
