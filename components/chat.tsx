@@ -6,10 +6,12 @@ import { useScreenShare } from "@/hooks/screenshare";
 import { useTaskPip } from "@/hooks/pip";
 import { useTasks } from "@/app/providers/TaskProvider";
 import { useAnalytics } from "@/app/providers/AnalyticsProvider";
+import { useSettings } from "@/app/providers/SettingsProvider";
 import { TaskScreen } from "./task-screen";
 import { SafariSettingsGuide } from "./safari-settings-guide";
 import { ScreenshareModal } from "./screenshare-modal";
-import { Monitor, Github } from "@geist-ui/icons";
+import { SettingsModal } from "./settings-modal";
+import { Monitor, Github, Settings, Cpu } from "@geist-ui/icons";
 
 const HISTORY_STATE_KEY = "screen-vision-session";
 
@@ -51,6 +53,8 @@ export function Chat() {
   const { openPipWindow } = useTaskPip();
 
   const taskContext = useTasks();
+
+  const { openSettings } = useSettings();
 
   const {
     tasks,
@@ -277,17 +281,25 @@ export function Chat() {
       <div className="flex items-center gap-2">
         <img src="/logo.png" height={40} width={180} />
       </div>
-      <a
-        href="https://github.com/bullmeza/screen.vision"
-        target="_blank"
-        className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-      >
-        <Github size={16} />
-        <span className="text-sm">Star on GitHub</span>
-        {/* <span className="text-sm text-gray-500 border-l border-gray-300 pl-2">
-          2.4k
-        </span> */}
-      </a>
+      <div className="flex items-center gap-2">
+        <a
+          href="https://github.com/bullmeza/screen.vision"
+          target="_blank"
+          className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <Github size={16} />
+          <span className="text-sm">Star on GitHub</span>
+        </a>
+
+        <button
+          onClick={openSettings}
+          className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <Cpu size={16} />
+
+          <span className="text-sm">Local Mode</span>
+        </button>
+      </div>
     </div>
   );
 
@@ -302,23 +314,25 @@ export function Chat() {
   if (isMobile) {
     logWithTimestamp("RENDER: showing mobile not supported");
     return (
-      <div className="flex justify-center items-center flex-col h-[85dvh]">
-        {navbar}
-        <div className="flex flex-col justify-center items-center max-w-[800px] w-full font-inter">
-          <div className="flex flex-col items-center gap-6 p-8 max-w-md text-center">
-            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-              <Monitor size={40} className="text-primary" />
-            </div>
-            <div className="space-y-3">
-              <h2 className="text-2xl font-semibold">Sorry!</h2>
-              <p className="text-muted-foreground text-lg leading-relaxed">
-                Screen Vision is only available on computers. Please visit this
-                page on a desktop or laptop.
-              </p>
+      <>
+        <div className="flex justify-center items-center flex-col h-[85dvh]">
+          {navbar}
+          <div className="flex flex-col justify-center items-center max-w-[800px] w-full font-inter">
+            <div className="flex flex-col items-center gap-6 p-8 max-w-md text-center">
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                <Monitor size={40} className="text-primary" />
+              </div>
+              <div className="space-y-3">
+                <h2 className="text-2xl font-semibold">Sorry!</h2>
+                <p className="text-muted-foreground text-lg leading-relaxed">
+                  Screen Vision is only available on computers. Please visit
+                  this page on a desktop or laptop.
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -326,12 +340,14 @@ export function Chat() {
   if (showSafariSettingsGuide && !isSharing) {
     logWithTimestamp("RENDER: showing Safari settings guide");
     return (
-      <div className="flex justify-center items-center flex-col h-[100dvh]">
-        {navbar}
-        <div className="flex flex-col justify-center items-center max-w-[800px] w-full font-inter">
-          <SafariSettingsGuide onComplete={handleSafariSettingsComplete} />
+      <>
+        <div className="flex justify-center items-center flex-col h-[100dvh]">
+          {navbar}
+          <div className="flex flex-col justify-center items-center max-w-[800px] w-full font-inter">
+            <SafariSettingsGuide onComplete={handleSafariSettingsComplete} />
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -351,6 +367,8 @@ export function Chat() {
           }}
           isLoading={isRequestingScreenShare}
         />
+        <SettingsModal />
+
         <div className="min-h-screen bg-grid-pattern">
           {navbar}
           <div className="flex justify-center items-center flex-col h-[80dvh]">
@@ -403,12 +421,14 @@ export function Chat() {
   if (showSafariGuide) {
     logWithTimestamp("RENDER: showing Safari guide (during sharing)");
     return (
-      <div className="flex justify-center items-center flex-col h-[100dvh]">
-        {navbar}
-        <div className="flex flex-col justify-center items-center max-w-[800px] w-full font-inter">
-          <SafariSettingsGuide onComplete={handleSafariSettingsComplete} />
+      <>
+        <div className="flex justify-center items-center flex-col h-[100dvh]">
+          {navbar}
+          <div className="flex flex-col justify-center items-center max-w-[800px] w-full font-inter">
+            <SafariSettingsGuide onComplete={handleSafariSettingsComplete} />
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 

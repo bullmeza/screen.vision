@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Navbar } from "@/components/navbar";
 import { TaskProvider } from "./providers/TaskProvider";
 import { AnalyticsProvider } from "./providers/AnalyticsProvider";
+import { SettingsProvider } from "./providers/SettingsProvider";
 import { Inter } from "next/font/google";
 import { PostHogProvider } from "./providers/PosthogProvider";
 
@@ -56,7 +57,9 @@ export default function RootLayout({
         <Toaster position="top-center" richColors />
         <PostHogProvider>
           <AnalyticsProvider>
-            <TaskProvider>{children}</TaskProvider>
+            <SettingsProvider>
+              <TaskProvider>{children}</TaskProvider>
+            </SettingsProvider>
           </AnalyticsProvider>
         </PostHogProvider>
       </body>

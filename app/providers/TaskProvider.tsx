@@ -19,6 +19,7 @@ import {
   useState,
 } from "react";
 import { useAnalytics } from "./AnalyticsProvider";
+import { useSettings } from "./SettingsProvider";
 import { getSystemInfo } from "@/lib/utils";
 import { TaskHistoryItem, FollowUpItem } from "@/components/task-screen/types";
 
@@ -54,6 +55,8 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export function TaskProvider({ children }: { children: ReactNode }) {
   const [goal, setGoal] = useState("");
+
+  const { settings, isUsingLocalProvider } = useSettings();
 
   const {
     captureImageFromStream,
@@ -108,7 +111,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
     try {
       console.log(`[${performance.now().toFixed(2)}ms] triggerGenerateTaskDescription: capturing image`);
-      const captured = await captureImageFromStream();
+      const captured = await captureImageFromStream({ isLocalLlm: isUsingLocalProvider });
       console.log(`[${performance.now().toFixed(2)}ms] triggerGenerateTaskDescription: image captured`);
       const imageDataUrl = captured.scaledImageDataUrl;
       const nonScaledImage = captured.nonScaledImageDataUrl;
@@ -138,8 +141,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       const action = await generateAction(
         goal,
         imageDataUrl,
+        settings,
         tasksRef.current.map((item) => item.text),
-        undefined,
         osName,
         followUpContext
       );
@@ -179,7 +182,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       setIsLoadingPreviewImage(true);
 
       if (!isLink && !isStandardizedInstruction && text) {
-        const coordinates = await generateCoordinate(text, nonScaledImage);
+        const coordinates = await generateCoordinate(text, nonScaledImage, settings);
         const coordinatePattern = /^-?\d+,\s*-?\d+$/;
 
         if (coordinates && coordinatePattern.test(coordinates.trim())) {
@@ -255,11 +258,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
     isCheckingStepRef.current = true;
 
-    // const link = document.createElement("a");
-    // link.href = scaledImage;
-    // link.download = `screenshot-${Date.now()}.png`;
-    // link.click();
-
     try {
       if (!lastScreenshotRef.current) {
         isCheckingStepRef.current = false;
@@ -270,7 +268,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       const isCompleted = await checkStepCompletion(
         taskDescription,
         lastScreenshotRef.current,
-        scaledImage
+        scaledImage,
+        settings
       );
 
       isCheckingStepRef.current = false;
@@ -392,7 +391,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
     try {
       const { scaledImageDataUrl: imageDataUrl } =
-        await captureImageFromStream();
+        await captureImageFromStream({ isLocalLlm: isUsingLocalProvider });
 
       const currentTaskText =
         tasksRef.current[tasksRef.current.length - 1]?.text ?? "";
@@ -402,6 +401,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         imageDataUrl,
         question,
         currentTaskText,
+        settings,
         (streamedMessage) => {
           if (isRegenerating) return;
 

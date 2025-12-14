@@ -1,11 +1,13 @@
-import axios from "axios";
+import { ApiSettings, PROVIDER_URLS } from "@/app/providers/SettingsProvider";
+import {
+  buildActionPrompt,
+  buildHelpPrompt,
+  buildCheckPrompt,
+  buildCoordinatePrompt,
+} from "./prompts";
 
 export const aiApiUrl =
   process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
-export const stepApiUrl = aiApiUrl + "/step";
-export const helpApiUrl = aiApiUrl + "/help";
-export const checkApiUrl = aiApiUrl + "/check";
-export const coordinatesApiUrl = aiApiUrl + "/coordinates";
 
 export const chatId = crypto.randomUUID();
 
@@ -66,52 +68,184 @@ export async function readStream(
   return result;
 }
 
+async function readOpenAIStream(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  onStream?: (message: string) => void
+): Promise<string> {
+  const decoder = new TextDecoder();
+  let result = "";
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine || trimmedLine === "data: [DONE]") continue;
+
+        if (trimmedLine.startsWith("data: ")) {
+          const dataContent = trimmedLine.slice(6);
+          try {
+            const parsed = JSON.parse(dataContent);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              result += content;
+              onStream?.(result);
+            }
+          } catch (e) {
+            console.error("Error parsing OpenAI JSON:", e);
+          }
+        }
+      }
+    }
+
+    if (buffer.trim()) {
+      const trimmedLine = buffer.trim();
+      if (trimmedLine.startsWith("data: ") && trimmedLine !== "data: [DONE]") {
+        const dataContent = trimmedLine.slice(6);
+        try {
+          const parsed = JSON.parse(dataContent);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) {
+            result += content;
+          }
+        } catch (e) {
+          console.error("Error parsing OpenAI JSON from buffer:", e);
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return result;
+}
+
 export interface FollowUpContext {
   previousImage: string;
   previousInstruction: string;
   followUpMessage: string;
 }
 
+type MessageContent =
+  | string
+  | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+type Message = { role: string; content: MessageContent };
+
+async function sendToBackend(
+  endpoint: string,
+  messages: Message[],
+  onStream?: (message: string) => void
+): Promise<string> {
+  const response = await fetch(`${aiApiUrl}/${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Backend request failed: ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) return "";
+
+  return readStream(reader, onStream);
+}
+
+async function sendDirectToApi(
+  messages: Message[],
+  settings: ApiSettings,
+  onStream?: (message: string) => void
+): Promise<string> {
+  if (!settings.provider) {
+    throw new Error("No provider configured");
+  }
+
+  const baseUrl = PROVIDER_URLS[settings.provider];
+  const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messages,
+      model: settings.model,
+      stream: true,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Direct API request failed: ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) return "";
+
+  return readOpenAIStream(reader, onStream);
+}
+
+const shouldUseDirectApi = (settings: ApiSettings): boolean => {
+  return Boolean(settings.provider && settings.model);
+};
+
 export async function generateAction(
   goal: string,
   base64Image: string,
+  settings: ApiSettings,
   completedSteps?: string[],
-  roughPlan?: string,
   osName?: string,
   followUpContext?: FollowUpContext
 ) {
   const maxRetries = 3;
   let lastError: unknown;
 
+  const systemPrompt = buildActionPrompt(goal, osName, completedSteps);
+
+  let messages: Message[];
+
+  if (followUpContext) {
+    messages = [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: [{ type: "text", text: "[Previous Screenshot]" }],
+      },
+      {
+        role: "assistant",
+        content: followUpContext.previousInstruction,
+      },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: followUpContext.followUpMessage },
+          { type: "image_url", image_url: { url: base64Image } },
+        ],
+      },
+    ];
+  } else {
+    messages = [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: [{ type: "image_url", image_url: { url: base64Image } }],
+      },
+    ];
+  }
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const response = await axios.post(
-        stepApiUrl,
-        {
-          goal,
-          image: base64Image,
-          os_name: osName,
-          completed_steps: completedSteps,
-          follow_up_context: followUpContext
-            ? {
-                previous_image: followUpContext.previousImage,
-                previous_instruction: followUpContext.previousInstruction,
-                follow_up_message: followUpContext.followUpMessage,
-              }
-            : undefined,
-        },
-        {
-          responseType: "stream",
-          adapter: "fetch",
-        }
-      );
-
-      const reader = response.data?.getReader();
-      if (!reader) return "";
-
-      const text = await readStream(reader);
-
-      return text;
+      if (shouldUseDirectApi(settings)) {
+        return await sendDirectToApi(messages, settings);
+      } else {
+        return await sendToBackend("step", messages);
+      }
     } catch (e) {
       lastError = e;
       console.error(
@@ -135,29 +269,28 @@ export async function generateHelpResponse(
   base64Image: string,
   userQuestion: string,
   previousMessage: string,
+  settings: ApiSettings,
   onStream?: (message: string) => void
 ) {
   try {
-    const response = await axios.post(
-      helpApiUrl,
+    const systemPrompt = buildHelpPrompt(goal, previousMessage || undefined);
+
+    const messages: Message[] = [
+      { role: "system", content: systemPrompt },
       {
-        goal,
-        image: base64Image,
-        user_question: userQuestion,
-        previous_message: previousMessage || undefined,
+        role: "user",
+        content: [
+          { type: "text", text: userQuestion },
+          { type: "image_url", image_url: { url: base64Image } },
+        ],
       },
-      {
-        responseType: "stream",
-        adapter: "fetch",
-      }
-    );
+    ];
 
-    const reader = response.data?.getReader();
-    if (!reader) return "";
-
-    const text = await readStream(reader, onStream);
-
-    return text;
+    if (shouldUseDirectApi(settings)) {
+      return await sendDirectToApi(messages, settings, onStream);
+    } else {
+      return await sendToBackend("help", messages, onStream);
+    }
   } catch (e) {
     console.error("Error generating help response:", e);
     return "";
@@ -167,26 +300,31 @@ export async function generateHelpResponse(
 export async function checkStepCompletion(
   currentInstruction: string,
   lastBase64Image: string,
-  currentBase64Image: string
+  currentBase64Image: string,
+  settings: ApiSettings
 ): Promise<boolean> {
   try {
-    const response = await axios.post(
-      checkApiUrl,
+    const systemPrompt = buildCheckPrompt(currentInstruction);
+
+    const messages: Message[] = [
+      { role: "system", content: systemPrompt },
       {
-        instruction: currentInstruction,
-        before_image: lastBase64Image,
-        after_image: currentBase64Image,
+        role: "user",
+        content: [
+          { type: "text", text: "Before:" },
+          { type: "image_url", image_url: { url: lastBase64Image } },
+          { type: "text", text: "After:" },
+          { type: "image_url", image_url: { url: currentBase64Image } },
+        ],
       },
-      {
-        responseType: "stream",
-        adapter: "fetch",
-      }
-    );
+    ];
 
-    const reader = response.data?.getReader();
-    if (!reader) return false;
-
-    const text = await readStream(reader);
+    let text: string;
+    if (shouldUseDirectApi(settings)) {
+      text = await sendDirectToApi(messages, settings);
+    } else {
+      text = await sendToBackend("check", messages);
+    }
 
     const cleanText = text.replace(/```json\n|\n```/g, "").trim();
 
@@ -206,28 +344,28 @@ export async function checkStepCompletion(
 
 export async function generateCoordinate(
   instruction: string,
-  base64Image: string
+  base64Image: string,
+  settings: ApiSettings
 ) {
   try {
-    const response = await axios.post(
-      coordinatesApiUrl,
+    const systemPrompt = buildCoordinatePrompt(instruction);
+
+    const messages: Message[] = [
+      { role: "system", content: systemPrompt },
       {
-        instruction,
-        image: base64Image,
+        role: "user",
+        content: [{ type: "image_url", image_url: { url: base64Image } }],
       },
-      {
-        responseType: "stream",
-        adapter: "fetch",
-      }
-    );
+    ];
 
-    const reader = response.data?.getReader();
-    if (!reader) return "None";
+    let text: string;
+    if (shouldUseDirectApi(settings)) {
+      text = await sendDirectToApi(messages, settings);
+    } else {
+      text = await sendToBackend("coordinates", messages);
+    }
 
-    const text = await readStream(reader);
-    const normalizedCoords = text.trim();
-
-    return normalizedCoords;
+    return text.trim();
   } catch (e) {
     console.error("Error generating coordinates:", e);
     return "None";

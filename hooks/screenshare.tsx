@@ -13,6 +13,7 @@ export interface PipDetails {
 interface CaptureImageOptions {
   whiteout?: boolean;
   size?: "sm" | "md" | "lg";
+  isLocalLlm?: boolean;
 }
 
 interface ScreenShareState {
@@ -196,7 +197,12 @@ export const useScreenShare = create<ScreenShareState>((set, get) => {
           video.play();
 
           setTimeout(() => {
-            const maxPixels = options?.size === "sm" ? 800_000 : imagePixelSize;
+            const maxPixels =
+              options?.size === "sm"
+                ? 800_000
+                : options?.isLocalLlm
+                ? 1_000_000
+                : imagePixelSize;
 
             const { width, height } = getScaledDimensions(
               video.videoWidth,
