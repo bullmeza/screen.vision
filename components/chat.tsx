@@ -87,6 +87,7 @@ export function Chat() {
   const [hasAcceptedModalBefore, setHasAcceptedModalBefore] = useState(false);
   const [browserIsSafari, setBrowserIsSafari] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showMobileBlocked, setShowMobileBlocked] = useState(false);
   const [githubStars, setGithubStars] = useState(25);
 
   useEffect(() => {
@@ -135,6 +136,10 @@ export function Chat() {
     const text = currentInput || input;
 
     if (text.trim()) {
+      if (isMobile) {
+        setShowMobileBlocked(true);
+        return;
+      }
       resetTasks();
       hasTriggeredFirstTask.current = false;
       startQuestionSession(text.trim());
@@ -270,44 +275,17 @@ export function Chat() {
           </span>
         </a>
 
-        {!isMobile && (
-          <button
-            onClick={openSettings}
-            className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <Cpu size={16} />
+        <button
+          onClick={openSettings}
+          className="hidden md:flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <Cpu size={16} />
 
-            <span className="text-sm">Local Mode</span>
-          </button>
-        )}
+          <span className="text-sm">Local Mode</span>
+        </button>
       </div>
     </div>
   );
-
-  // Show mobile not supported message after hydration
-  if (isHydrated && isMobile) {
-    return (
-      <>
-        <div className="flex justify-center items-center flex-col h-[85dvh]">
-          {navbar}
-          <div className="flex flex-col justify-center items-center max-w-[800px] w-full font-inter">
-            <div className="flex flex-col items-center gap-6 p-8 max-w-md text-center">
-              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                <Monitor size={40} className="text-primary" />
-              </div>
-              <div className="space-y-3">
-                <h2 className="text-2xl font-semibold">Sorry!</h2>
-                <p className="text-muted-foreground text-lg leading-relaxed">
-                  Screen Vision is only available on computers. Please visit
-                  this page on a desktop or laptop.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
 
   // Show Safari settings guide before screen sharing if needed
   if (showSafariSettingsGuide && !isSharing) {
@@ -355,47 +333,62 @@ export function Chat() {
           {navbar}
           <div className="flex justify-center items-center flex-col h-[75dvh]">
             <div className="flex flex-col justify-center items-center max-w-[800px] w-full font-inter px-4">
-              <h1 className="mb-4 text-center text-5xl font-bold text-black tracking-tight">
-                Share your screen with AI
-              </h1>
-              <h2 className="mb-8 text-center text-xl text-gray-500">
-                Get an AI guided step-by-step fix for your problem.
-              </h2>
+              {showMobileBlocked ? (
+                <div className="flex flex-col items-center gap-6 p-8 max-w-md text-center">
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Monitor size={40} className="text-primary" />
+                  </div>
+                  <div className="space-y-3">
+                    <h2 className="text-2xl font-semibold">Sorry!</h2>
+                    <p className="text-muted-foreground text-lg leading-relaxed">
+                      Screen Vision is only available on computers. Please visit
+                      this page on a desktop or laptop.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h1 className="mb-4 text-center text-5xl font-bold text-black tracking-tight">
+                    Share your screen with AI
+                  </h1>
+                  <h2 className="mb-8 text-center text-xl text-gray-500">
+                    Get an AI guided step-by-step fix for your problem.
+                  </h2>
 
-              <div className="w-full relative">
-                <MultimodalInput
-                  input={input}
-                  setInput={setInput}
-                  handleSubmit={handleSubmit}
-                  isLoading={false}
-                  stop={() => {}}
-                  messages={[]}
-                  placeholderText="Describe your problem here..."
-                  showSuggestions
-                  onSuggestedActionClicked={trackSuggestedActionClicked}
-                />
-              </div>
+                  <div className="w-full relative">
+                    <MultimodalInput
+                      input={input}
+                      setInput={setInput}
+                      handleSubmit={handleSubmit}
+                      isLoading={false}
+                      stop={() => {}}
+                      messages={[]}
+                      placeholderText="Describe your problem here..."
+                      showSuggestions
+                      onSuggestedActionClicked={trackSuggestedActionClicked}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {!isMobile && (
-          <div className="mt-12 text-center text-sm text-gray-500 w-full absolute bottom-6 left-0 right-0">
-            <p>
-              This project is fully open-source. You can enable Local Mode or
-              host it yourself{" "}
-              <a
-                href="https://github.com/bullmeza/screen.vision?tab=readme-ov-file#self-hosting"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:text-gray-600 transition-colors"
-              >
-                here
-              </a>
-              .
-            </p>
-          </div>
-        )}
+        <div className="hidden md:block mt-12 text-center text-sm text-gray-500 w-full absolute bottom-6 left-0 right-0">
+          <p>
+            This project is fully open-source. You can enable Local Mode or host
+            it yourself{" "}
+            <a
+              href="https://github.com/bullmeza/screen.vision?tab=readme-ov-file#self-hosting"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-gray-600 transition-colors"
+            >
+              here
+            </a>
+            .
+          </p>
+        </div>
       </>
     );
   }
