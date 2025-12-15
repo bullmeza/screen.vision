@@ -12,13 +12,9 @@ import { SafariSettingsGuide } from "./safari-settings-guide";
 import { ScreenshareModal } from "./screenshare-modal";
 import { SettingsModal } from "./settings-modal";
 import { Monitor, Github, Settings, Cpu } from "@geist-ui/icons";
+import { LoaderIcon } from "./icons";
 
 const HISTORY_STATE_KEY = "screen-vision-session";
-
-const logWithTimestamp = (message: string, data?: unknown) => {
-  const timestamp = performance.now().toFixed(2);
-  console.log(`[${timestamp}ms] ${message}`, data ?? "");
-};
 
 // Detect if browser is Safari
 const isSafari = (): boolean => {
@@ -134,13 +130,11 @@ export function Chat() {
     event?: { preventDefault?: () => void },
     currentInput?: string
   ) => {
-    logWithTimestamp("handleSubmit: START");
     event?.preventDefault?.();
 
     const text = currentInput || input;
 
     if (text.trim()) {
-      logWithTimestamp("handleSubmit: resetting tasks and setting state");
       resetTasks();
       hasTriggeredFirstTask.current = false;
       startQuestionSession(text.trim());
@@ -153,12 +147,7 @@ export function Chat() {
       }
 
       if (hasAcceptedModalBefore) {
-        logWithTimestamp("handleSubmit: calling requestScreenShare");
         const success = await requestScreenShare();
-        logWithTimestamp("handleSubmit: requestScreenShare returned", {
-          success,
-          isSharing,
-        });
         if (!success) {
           resetTasks();
           setHasSubmittedProblem(false);
@@ -166,20 +155,14 @@ export function Chat() {
           setInput("");
           trackScreenshareStarted();
           history.pushState({ [HISTORY_STATE_KEY]: true }, "");
-          if (!browserIsSafari || safariSettingsCompleted) {
-            setTimeout(() => openPipWindow(), 1000);
-          }
         }
-        logWithTimestamp("handleSubmit: END (hasAcceptedModalBefore path)");
       } else {
-        logWithTimestamp("handleSubmit: showing screenshare modal");
         setShowScreenshareModal(true);
       }
     }
   };
 
   const handleScreenshareConfirm = async () => {
-    logWithTimestamp("handleScreenshareConfirm: START");
     trackScreenshareAccepted();
     setShowScreenshareModal(false);
 
@@ -188,24 +171,17 @@ export function Chat() {
       return;
     }
 
-    logWithTimestamp("handleScreenshareConfirm: calling requestScreenShare");
     const success = await requestScreenShare();
-    logWithTimestamp("handleScreenshareConfirm: requestScreenShare returned", {
-      success,
-      isSharing,
-    });
 
     if (success) {
       setInput("");
       trackScreenshareStarted();
       localStorage.setItem(SCREENSHARE_MODAL_ACCEPTED_KEY, "true");
       history.pushState({ [HISTORY_STATE_KEY]: true }, "");
-      setTimeout(() => openPipWindow(), 1000);
     } else {
       resetTasks();
       setHasSubmittedProblem(false);
     }
-    logWithTimestamp("handleScreenshareConfirm: END");
   };
 
   useEffect(() => {
@@ -233,25 +209,15 @@ export function Chat() {
   ]);
 
   useEffect(() => {
-    logWithTimestamp("useEffect[isSharing]: triggered", {
-      hasSubmittedProblem,
-      isSharing,
-      browserIsSafari,
-      safariSettingsCompleted,
-    });
     const shouldShowSafariGuide =
       isSharing && browserIsSafari && !safariSettingsCompleted;
     if (hasSubmittedProblem && isSharing && !shouldShowSafariGuide) {
-      logWithTimestamp(
-        "useEffect[isSharing]: conditions met, scheduling openPipWindow and triggerFirstTask"
-      );
       setTimeout(() => {
         openPipWindow();
       }, 1000);
 
       if (!hasTriggeredFirstTask.current) {
         hasTriggeredFirstTask.current = true;
-        logWithTimestamp("useEffect[isSharing]: calling triggerFirstTask");
         triggerFirstTask();
       }
     }
@@ -318,16 +284,8 @@ export function Chat() {
     </div>
   );
 
-  logWithTimestamp("RENDER", {
-    isSharing,
-    hasSubmittedProblem,
-    isLoadingTask,
-    showSafariGuide,
-  });
-
   // Show mobile not supported message after hydration
   if (isHydrated && isMobile) {
-    logWithTimestamp("RENDER: showing mobile not supported");
     return (
       <>
         <div className="flex justify-center items-center flex-col h-[85dvh]">
@@ -353,7 +311,6 @@ export function Chat() {
 
   // Show Safari settings guide before screen sharing if needed
   if (showSafariSettingsGuide && !isSharing) {
-    logWithTimestamp("RENDER: showing Safari settings guide");
     return (
       <>
         <div className="flex justify-center items-center flex-col h-[100dvh]">
@@ -366,9 +323,19 @@ export function Chat() {
     );
   }
 
+  if (isRequestingScreenShare) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="animate-spin">
+          <LoaderIcon size={48} />
+        </div>
+        <p className="mt-4 text-lg text-gray-600">Loading Screenshare</p>
+      </div>
+    );
+  }
+
   // Step 1 & 2: Show input or screenshare prompt with smooth transition
   if (!isSharing) {
-    logWithTimestamp("RENDER: showing input form (isSharing=false)");
     return (
       <>
         <ScreenshareModal
@@ -435,7 +402,6 @@ export function Chat() {
 
   // Step 3: Problem submitted and sharing - show Safari guide if needed, otherwise TaskScreen
   if (showSafariGuide) {
-    logWithTimestamp("RENDER: showing Safari guide (during sharing)");
     return (
       <>
         <div className="flex justify-center items-center flex-col h-[100dvh]">
@@ -448,7 +414,6 @@ export function Chat() {
     );
   }
 
-  logWithTimestamp("RENDER: showing TaskScreen");
   return (
     <>
       <TaskScreen
