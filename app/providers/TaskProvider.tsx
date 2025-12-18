@@ -71,6 +71,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     trackFollowupQuestionAsked,
     trackFollowupResponseReceived,
     trackMaxStepsExceeded,
+    trackTaskCompleted,
   } = useAnalytics();
 
   const [tasks, setTasks] = useState<TaskHistoryItem[]>([]);
@@ -296,6 +297,10 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       if (isCompleted) {
         setIsAnalyzingScreenChange(false);
         if (!cancelPendingChecksRef.current) {
+          const completedTask = tasksRef.current[tasksRef.current.length - 1];
+          if (completedTask) {
+            trackTaskCompleted(completedTask.text, tasksRef.current.length);
+          }
           setAutoCompleteTriggered((prev) => prev + 1);
         }
       } else if (pendingImage) {
@@ -315,6 +320,10 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   const onNextTask = () => {
     if (hasExceededMaxSteps) return;
+    const currentTask = tasksRef.current[tasksRef.current.length - 1];
+    if (currentTask) {
+      trackTaskCompleted(currentTask.text, tasksRef.current.length);
+    }
     cancelPendingChecks();
     triggerGenerateTaskDescription();
   };

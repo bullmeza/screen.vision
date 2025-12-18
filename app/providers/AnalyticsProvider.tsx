@@ -29,8 +29,8 @@ interface AnalyticsContextType {
   trackScreenshareDeclined: () => void;
   trackScreenshareStarted: () => void;
 
-  trackPlanGenerated: (stepCount: number, steps: string[]) => void;
   trackTaskRefreshed: (taskText: string, stepNumber: number) => void;
+  trackTaskCompleted: (taskText: string, stepNumber: number) => void;
   trackAllTasksCompleted: () => void;
 
   trackFollowupQuestionAsked: (question: string) => void;
@@ -148,20 +148,23 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
     posthog.capture("screenshare_started", getSessionProperties());
   }, [posthog, getSessionProperties]);
 
-  const trackPlanGenerated = useCallback(
-    (stepCount: number, steps: string[]) => {
-      posthog.capture("plan_generated", {
+  const trackTaskRefreshed = useCallback(
+    (taskText: string, stepNumber: number) => {
+      posthog.capture("task_refreshed", {
         ...getSessionProperties(),
-        step_count: stepCount,
-        steps,
+        task_text: taskText,
+        step_number: stepNumber,
       });
     },
     [posthog, getSessionProperties]
   );
 
-  const trackTaskRefreshed = useCallback(
+  const trackTaskCompleted = useCallback(
     (taskText: string, stepNumber: number) => {
-      posthog.capture("task_refreshed", {
+      if (sessionRef.current) {
+        sessionRef.current.stepsCompleted += 1;
+      }
+      posthog.capture("task_completed", {
         ...getSessionProperties(),
         task_text: taskText,
         step_number: stepNumber,
@@ -244,8 +247,8 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
         trackScreenshareAccepted,
         trackScreenshareDeclined,
         trackScreenshareStarted,
-        trackPlanGenerated,
         trackTaskRefreshed,
+        trackTaskCompleted,
         trackAllTasksCompleted,
         trackFollowupQuestionAsked,
         trackFollowupResponseReceived,
