@@ -387,6 +387,7 @@ export function Chat() {
         openSettings={openSettings}
         showLocalMode={false}
         grayMode={true}
+        showForTeams={true}
       />
 
       <MinimalTaskScreen goal={goal} onFeedbackSubmit={trackFeedbackSubmit} />
