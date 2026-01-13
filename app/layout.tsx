@@ -10,27 +10,15 @@ import { PostHogProvider } from "./providers/PosthogProvider";
 import { ChunkErrorHandler } from "./providers/ChunkErrorHandler";
 
 export const metadata = {
+  metadataBase: new URL("https://screen.vision"),
   title: "Screen Vision",
-  description: "Share your screen and let AI walk you through the solution",
+  description:
+    "Share your screen with AI. Get a guided tour for anything, right on your screen.",
   icons: {
     icon: "/icon.png",
+    shortcut: "/icon.png",
     apple: "/icon.png",
   },
-  // openGraph: {
-  //   images: [
-  //     {
-  //       url: "/og?title=Screen Vision",
-  //     },
-  //   ],
-  // },
-  // twitter: {
-  //   card: "summary_large_image",
-  //   images: [
-  //     {
-  //       url: "/og?title=Screen Vision",
-  //     },
-  //   ],
-  // },
 };
 
 const inter = Inter({
