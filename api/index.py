@@ -28,9 +28,16 @@ app = FastAPI()
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+is_production = (
+    os.getenv("RAILWAY_ENVIRONMENT_NAME") == "production"
+    or os.getenv("VERCEL_ENV") == "production"
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://screen.vision", "https://www.screen.vision"]
+    if is_production
+    else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

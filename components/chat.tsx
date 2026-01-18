@@ -2,6 +2,7 @@
 
 import { MultimodalInput } from "@/components/multimodal-input";
 import React, { useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
 import { useScreenShare } from "@/hooks/screenshare";
 import { useTaskPip } from "@/hooks/pip";
 import { useTasks } from "@/app/providers/TaskProvider";
@@ -136,16 +137,27 @@ export function Chat() {
     event?.preventDefault?.();
 
     const text = currentInput || input;
+    const trimmedText = text.trim();
 
-    if (text.trim()) {
+    if (trimmedText.length > 0) {
+      if (trimmedText.length < 7) {
+        toast.error("Please describe your problem in more detail.");
+        return;
+      }
+
+      if (trimmedText.length > 400) {
+        toast.error("Please keep your description under 400 characters.");
+        return;
+      }
+
       if (isMobile) {
         setShowMobileBlocked(true);
         return;
       }
       resetTasks();
       hasTriggeredFirstTask.current = false;
-      startQuestionSession(text.trim());
-      setGoal(text.trim());
+      startQuestionSession(trimmedText);
+      setGoal(trimmedText);
       setHasSubmittedProblem(true);
 
       if (browserIsSafari && !safariSettingsCompleted) {
